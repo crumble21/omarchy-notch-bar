@@ -19,7 +19,7 @@ omarchy plugin add https://github.com/crumble21/omarchy-notch-bar.git --enable
 
 `--enable` makes it the active bar. The first time it loads, it adds its **Notch divider** to the center section of your layout.
 
-To go back to the built-in bar: `omarchy bar use omarchy.bar` (or `omarchy plugin remove io.github.crumble21.notch-bar`).
+To switch back to the built-in bar without uninstalling: `omarchy bar use omarchy.bar`. Your layout stays as it is, and `omarchy bar use io.github.crumble21.notch-bar` switches back again.
 
 ## Placing widgets
 
@@ -60,6 +60,28 @@ Toggle the split without editing the file: `omarchy-shell omarchy.bar toggleNotc
 The notch geometry is in physical pixels, so it holds at any display scale and text size (only the widgets themselves grow with `omarchy display text size`). Other notched panels fall back to a width proportional to the panel.
 
 **Help calibrate:** on an "Estimate" panel, set `"width"` in the config above and adjust it until the islands meet the notch edge (one pixel narrower and the background shows between the notch and the islands). Then [open an issue](https://github.com/crumble21/omarchy-notch-bar/issues) with your model, resolution, and value.
+
+## Uninstall
+
+1. Remove the plugin. This switches you back to the built-in bar and deletes the plugin:
+
+   ```bash
+   omarchy plugin remove io.github.crumble21.notch-bar
+   ```
+
+   Omarchy keeps a backup of the removed plugin as `~/.config/omarchy/plugins/.io.github.crumble21.notch-bar.bak.<timestamp>/`. Delete it once you are sure.
+
+2. Clean up what the plugin left in `~/.config/omarchy/shell.json`: the Notch divider entry in your layout and the `bar.notch` settings. The built-in bar ignores both, so this is tidying rather than required. The shell reloads the file on save.
+
+   ```bash
+   cp ~/.config/omarchy/shell.json ~/.config/omarchy/shell.json.bak
+   jq 'del(.bar.notch)
+     | if .bar.id == "io.github.crumble21.notch-bar" then del(.bar.id) else . end
+     | .bar.layout |= (to_entries | map(.value |= map(select((if type == "object" then .id else . end) != "io.github.crumble21.notch-bar"))) | from_entries)' \
+     ~/.config/omarchy/shell.json.bak > ~/.config/omarchy/shell.json
+   ```
+
+Widgets that were in the center section stay in the center section of the built-in bar.
 
 ## Development
 
