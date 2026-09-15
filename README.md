@@ -43,7 +43,7 @@ Optional keys under `bar` in `~/.config/omarchy/shell.json`. All sizes are physi
 |---|---|---|
 | `split` | `true` | Split the bar around the notch |
 | `width` | auto | Notch width. Set this if the islands overlap the notch or leave a gap |
-| `gap` | about 10 | Space between each island's widgets area and the notch |
+| `gap` | `10` | Space between each island's widget area and the notch |
 | `bleed` | `48` | How far each island's background reaches in under the notch, so it follows the notch's rounded corners. `0` stops the background at the gap |
 
 Toggle the split without editing the file: `omarchy-shell omarchy.bar toggleNotchSplit`
@@ -57,7 +57,7 @@ Toggle the split without editing the file: `omarchy-shell omarchy.bar toggleNotc
 | MacBook Air 13.6" | 2560x1664 | 307 | Estimate |
 | MacBook Air 15" | 2880x1864 | 307 | Estimate |
 
-Any display scale works: sizes are converted from physical pixels. Other notched panels fall back to a width proportional to the panel.
+The notch geometry is in physical pixels, so it holds at any display scale and text size (only the widgets themselves grow with `omarchy display text size`). Other notched panels fall back to a width proportional to the panel.
 
 **Help calibrate:** on an "Estimate" panel, set `"width"` in the config above and adjust it until the islands meet the notch edge (one pixel narrower and the background shows between the notch and the islands). Then [open an issue](https://github.com/crumble21/omarchy-notch-bar/issues) with your model, resolution, and value.
 

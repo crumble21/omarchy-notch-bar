@@ -1105,7 +1105,9 @@ Item {
       var configured = Number(raw)
       return raw !== undefined && raw !== null && configured >= 0 ? Math.round(configured / notchScale) : fallback
     }
-    readonly property int notchGap: notchPixels("gap", Style.space(6))
+    // Physical like the notch itself: a font-scaled gap would move the island
+    // edges off the calibrated notch width whenever the text size changes.
+    readonly property int notchGap: notchPixels("gap", Math.round(10 / notchScale))
     // How far each island's background reaches in under the cutout. The notch
     // is opaque hardware, so only the wedge beside its rounded bottom corner
     // shows, and the bar follows the notch's own curve. Widgets and input stay
