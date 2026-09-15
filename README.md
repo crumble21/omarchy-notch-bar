@@ -40,7 +40,7 @@ Every change to the fork is fenced by `// notch-split: begin` / `// notch-split:
 node test/notch-model-test.js
 ```
 
-Note: a new QML file added to this directory while the shell is running may fail to load with "File name case mismatch" until `omarchy-restart-shell`.
+Note: the running shell does not pick up edits to `Bar.qml` or `NotchModel.js`, and a new QML file may fail with "File name case mismatch". Run `omarchy-restart-shell` after changing the plugin's code.
 
 ## Removing
 
