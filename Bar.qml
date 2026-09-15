@@ -402,12 +402,7 @@ Item {
     }
   }
 
-  // notch-split: begin
-  onBarConfigChanged: {
-    applyBarConfig()
-    Qt.callLater(ensureNotchMarker)
-  }
-  // notch-split: end
+  onBarConfigChanged: applyBarConfig()
 
   function layoutEntries(region) {
     var serial = barConfigSerial
@@ -1010,6 +1005,10 @@ Item {
       root.toggleNotchSplit()
       return "ok"
     }
+
+    function placeNotchDivider(): string {
+      return root.placeNotchDivider()
+    }
     // notch-split: end
   }
 
@@ -1513,18 +1512,17 @@ Item {
   }
 
   // The divider shares the bar's plugin id, which `omarchy bar put` treats as
-  // already placed, so the bar adds it itself where the fallback split already
-  // divides. Nothing moves, and dragging across the notch has a boundary.
-  function ensureNotchMarker() {
-    if (!Util.isPlainObject(barConfig)) return
-    if (!root.shell || typeof root.shell.mutateShellConfig !== "function") return
-    // Never write while the host is on defaults: it falls back to them at
-    // startup and for a moment whenever shell.json is rewritten, and saving
-    // then would replace the user's whole config with the defaults.
-    if (root.shell.shellConfig === root.shell.defaultsConfig || root.shell.shellConfig === root.shell.builtinShellConfig) return
-    if (Util.canonicalWidgetId(String(barConfig.id || "")) !== root.notchMarkerId) return
+  // already placed, so this places it where the fallback split already
+  // divides: nothing moves. Only runs when the user asks for it over IPC.
+  function placeNotchDivider() {
+    if (!Util.isPlainObject(barConfig)) return "no bar config"
+    if (!root.shell || typeof root.shell.mutateShellConfig !== "function") return "shell cannot save config"
+    // The host sits on defaults at startup and while shell.json reloads;
+    // saving then would replace the user's whole config with the defaults.
+    if (root.shell.shellConfig === root.shell.defaultsConfig || root.shell.shellConfig === root.shell.builtinShellConfig) return "config not loaded, try again"
+    if (Util.canonicalWidgetId(String(barConfig.id || "")) !== root.notchMarkerId) return "notch bar is not the active bar"
     var layout = Util.isPlainObject(barConfig.layout) ? barConfig.layout : null
-    if (layout && NotchModel.notchMarkerInsertIndex(layout.center, root.notchMarkerId, root.centerAnchor) === -1) return
+    if (layout && NotchModel.notchMarkerInsertIndex(layout.center, root.notchMarkerId, root.centerAnchor) === -1) return "already placed"
 
     root.shell.mutateShellConfig(function(config) {
       if (!Util.isPlainObject(config.bar)) config.bar = {}
@@ -1535,6 +1533,7 @@ Item {
       var index = NotchModel.notchMarkerInsertIndex(center, root.notchMarkerId, anchor)
       if (index !== -1) center.splice(index, 0, { id: root.notchMarkerId })
     })
+    return "ok"
   }
 
   function toggleNotchSplit() {

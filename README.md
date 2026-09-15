@@ -8,8 +8,15 @@ It is a fork of Omarchy's built-in bar (`omarchy.bar`), so every widget, panel, 
 
 ## Requirements
 
+- A notched Apple Silicon MacBook
 - Omarchy 4 on Asahi Linux, with the notch area enabled (Omarchy's installer sets `appledrm show_notch=1`)
 - The bar at the top of the screen
+
+No other dependencies: it uses only what Omarchy ships (its Quickshell shell and Hyprland). It installs no packages, services, or scripts, and needs no root access.
+
+## What it changes
+
+The plugin writes to `~/.config/omarchy/shell.json` only when you ask it to: `placeNotchDivider`, `toggleNotchSplit`, or dragging widgets (the built-in bar's own behavior).
 
 ## Install
 
@@ -17,7 +24,15 @@ It is a fork of Omarchy's built-in bar (`omarchy.bar`), so every widget, panel, 
 omarchy plugin add https://github.com/crumble21/omarchy-notch-bar.git --enable
 ```
 
-`--enable` makes it the active bar. The first time it loads, it adds its **Notch divider** to the center section of your layout.
+`--enable` makes it the active bar. Your layout is left exactly as it was: the plugin never edits your config on its own.
+
+Optionally, add the **Notch divider** to choose which center widgets sit on which side of the notch (see Placing widgets):
+
+```bash
+omarchy-shell omarchy.bar placeNotchDivider
+```
+
+It goes where the automatic split already divides, so nothing moves.
 
 To switch back to the built-in bar without uninstalling: `omarchy bar use omarchy.bar`. Your layout stays as it is, and `omarchy bar use io.github.crumble21.notch-bar` switches back again.
 
@@ -28,7 +43,7 @@ To switch back to the built-in bar without uninstalling: `omarchy bar use omarch
 ```
 
 - `left` and `right` sections sit at the screen edges, as usual.
-- The `center` section sits against the notch. Widgets before the Notch divider go on the left side of the notch; widgets after it go on the right.
+- The `center` section sits against the notch. Widgets before the Notch divider go on the left side of the notch; widgets after it go on the right. Without the divider, the first half of the center widgets goes left (or everything up to `centerAnchor`, if you set one).
 - Drag widgets to rearrange them. Each island's notch-facing edge is a drop target, even when that side of the notch is empty.
 
 ## Config
