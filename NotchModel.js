@@ -97,11 +97,34 @@ function splitCenter(entries, markerId, anchorId) {
   return { before: entries.slice(0, half), after: entries.slice(half) }
 }
 
+// Center-section entry id a widget dropped on a notch-facing island edge is
+// inserted in front of ("" appends). The edges are drop targets even when that
+// side of the notch is empty, which a drop onto neighbouring slots can't reach.
+function notchDropBefore(entries, markerId, anchorId, side) {
+  var list = Array.isArray(entries) ? entries : []
+  var marker = -1
+  for (var i = 0; i < list.length; i++) {
+    if (markerId && entryId(list[i]) === markerId) { marker = i; break }
+  }
+
+  if (marker !== -1) {
+    if (side === "left") return markerId
+    return marker + 1 < list.length ? entryId(list[marker + 1]) : ""
+  }
+
+  if (side === "left") {
+    var after = splitCenter(list, markerId, anchorId).after
+    return after.length > 0 ? entryId(after[0]) : ""
+  }
+  return ""
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     measuredNotchPanels: measuredNotchPanels,
     notchWidth: notchWidth,
     islandRects: islandRects,
-    splitCenter: splitCenter
+    splitCenter: splitCenter,
+    notchDropBefore: notchDropBefore
   }
 }

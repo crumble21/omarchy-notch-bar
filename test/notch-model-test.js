@@ -101,6 +101,33 @@ check('string entries and non-arrays are tolerated', () => {
   assert.deepStrictEqual(notch.splitCenter(null, 'marker', ''), { before: [], after: [] })
 })
 
+// notchDropBefore ----------------------------------------------------------
+
+check('dropping on the left notch edge lands just before the marker', () => {
+  assert.strictEqual(notch.notchDropBefore(center, 'marker', '', 'left'), 'marker')
+})
+
+check('dropping on the right notch edge lands just after the marker', () => {
+  assert.strictEqual(notch.notchDropBefore(center, 'marker', '', 'right'), 'c')
+})
+
+check('dropping on the right notch edge with nothing after the marker appends', () => {
+  assert.strictEqual(notch.notchDropBefore([{ id: 'a' }, { id: 'marker' }], 'marker', '', 'right'), '')
+})
+
+check('dropping on the left notch edge of an empty left side still lands before the marker', () => {
+  assert.strictEqual(notch.notchDropBefore([{ id: 'marker' }, { id: 'c' }], 'marker', '', 'left'), 'marker')
+})
+
+check('without a marker the left edge lands before the first right-side entry', () => {
+  assert.strictEqual(notch.notchDropBefore([{ id: 'a' }, { id: 'b' }, { id: 'c' }], 'marker', 'b', 'left'), 'c')
+  assert.strictEqual(notch.notchDropBefore([{ id: 'a' }], 'marker', 'a', 'left'), '')
+})
+
+check('without a marker the right edge appends', () => {
+  assert.strictEqual(notch.notchDropBefore([{ id: 'a' }, { id: 'b' }], 'marker', '', 'right'), '')
+})
+
 if (failures > 0) {
   console.log('\n' + failures + ' failing')
   process.exit(1)

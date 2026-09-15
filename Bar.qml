@@ -725,6 +725,17 @@ Item {
       })
     }
 
+    // notch-split: begin
+    // Listed after real slots so a slot wins a tie at the same edge.
+    for (var e = 0; e < notchDropEdges.length; e++) {
+      var edge = notchDropEdges[e]
+      if (!edge || !edge.visible) continue
+      if (sourceWindow && !root.sameWindow(root.targetWindow(edge), sourceWindow)) continue
+      var edgePoint = edge.mapToItem(null, 0, 0)
+      candidates.push({ slot: edge, x: edgePoint.x, y: edgePoint.y, width: edge.width, height: edge.height })
+    }
+    // notch-split: end
+
     return BarModel.nearestDropTarget(candidates, scenePoint, root.vertical)
   }
 
@@ -764,6 +775,13 @@ Item {
 
   function dropBarModuleAtTarget(sourceSlot, targetSlot, afterTarget) {
     if (!sourceSlot || !targetSlot) return false
+
+    // notch-split: begin
+    if (targetSlot.notchSide) {
+      var notchBefore = NotchModel.notchDropBefore(layoutEntries("center"), root.notchMarkerId, root.centerAnchor, targetSlot.notchSide)
+      return dropBarModule(sourceSlot, "center", notchBefore)
+    }
+    // notch-split: end
 
     var beforeName = afterTarget ? nextVisibleModuleName(targetSlot.region, targetSlot.moduleName, sourceSlot) : targetSlot.moduleName
     return dropBarModule(sourceSlot, targetSlot.region, beforeName)
@@ -1256,6 +1274,11 @@ Item {
             anchors.rightMargin: Style.space(4)
             anchors.verticalCenter: parent.verticalCenter
           }
+
+          NotchDropEdge {
+            notchSide: "left"
+            x: parent.width - Style.space(4)
+          }
         }
 
         Item {
@@ -1272,6 +1295,11 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: Style.space(4)
             anchors.verticalCenter: parent.verticalCenter
+          }
+
+          NotchDropEdge {
+            notchSide: "right"
+            x: Style.space(4)
           }
 
           RightModules {
@@ -1446,6 +1474,24 @@ Item {
 
   function centerSplit() {
     return NotchModel.splitCenter(root.layoutEntries("center"), root.notchMarkerId, root.centerAnchor)
+  }
+
+  // Invisible drop targets on each island's notch-facing edge, so a widget can
+  // be dropped beside the notch even when that side has no widgets left.
+  property var notchDropEdges: []
+
+  component NotchDropEdge: Item {
+    id: dropEdge
+
+    required property string notchSide
+    readonly property string region: "center"
+    readonly property string moduleName: root.notchMarkerId
+
+    width: 1
+    height: parent ? parent.height : 0
+
+    Component.onCompleted: root.notchDropEdges = root.notchDropEdges.concat([dropEdge])
+    Component.onDestruction: root.notchDropEdges = root.notchDropEdges.filter(function(edge) { return edge !== dropEdge })
   }
 
   function toggleNotchSplit() {
