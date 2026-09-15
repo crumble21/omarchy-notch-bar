@@ -1471,7 +1471,7 @@ Item {
   // On an Apple notched panel the top bar splits into two islands with nothing
   // behind the camera cutout. The center section hugs the notch from both
   // sides, divided by this plugin's own zero-width marker widget.
-  readonly property string notchMarkerId: manifest && manifest.id ? String(manifest.id) : "connor.bar"
+  readonly property string notchMarkerId: manifest && manifest.id ? String(manifest.id) : "io.github.crumble21.notch-bar"
   readonly property var notchConfig: Util.isPlainObject(barConfig) && Util.isPlainObject(barConfig.notch) ? barConfig.notch : ({})
   readonly property bool notchSplitEnabled: notchConfig.split !== false
 

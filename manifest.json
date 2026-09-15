@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "id": "connor.bar",
+  "id": "io.github.crumble21.notch-bar",
   "name": "Notch Bar",
-  "version": "1.0.0",
-  "author": "Omarchy",
-  "description": "Status bar that splits around the MacBook notch",
+  "version": "0.1.0",
+  "author": "Connor Rumble",
+  "description": "Omarchy bar that splits around the camera notch on Apple Silicon MacBooks",
   "kinds": [
     "bar",
     "bar-widget"
@@ -13,14 +13,12 @@
     "bar": "Bar.qml",
     "barWidget": "NotchMarker.qml"
   },
-  "omarchy": {
-    "clonedFrom": "omarchy.bar"
-  },
   "barWidget": {
     "displayName": "Notch divider",
     "description": "Center widgets before it sit left of the notch, after it right of the notch",
     "category": "Layout",
     "allowMultiple": false,
     "defaultSection": "center"
-  }
+  },
+  "license": "MIT"
 }
