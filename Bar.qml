@@ -1510,6 +1510,11 @@ Item {
   function ensureNotchMarker() {
     if (!Util.isPlainObject(barConfig)) return
     if (!root.shell || typeof root.shell.mutateShellConfig !== "function") return
+    // Never write while the host is on defaults: it falls back to them at
+    // startup and for a moment whenever shell.json is rewritten, and saving
+    // then would replace the user's whole config with the defaults.
+    if (root.shell.shellConfig === root.shell.defaultsConfig || root.shell.shellConfig === root.shell.builtinShellConfig) return
+    if (Util.canonicalWidgetId(String(barConfig.id || "")) !== root.notchMarkerId) return
     var layout = Util.isPlainObject(barConfig.layout) ? barConfig.layout : null
     if (layout && NotchModel.notchMarkerInsertIndex(layout.center, root.notchMarkerId, root.centerAnchor) === -1) return
 
