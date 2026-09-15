@@ -6,17 +6,17 @@
 // cutout is the same physical module on every notched MacBook, so panels in
 // the same ppi family share a width and lower-ppi panels span fewer columns.
 var measuredNotchPanels = [
-  // MacBook Pro 14" (3024x1964, 254ppi). Calibrate with bar.notch.width.
-  { width: 3024, height: 1964, cutoutColumns: 400 },
+  // MacBook Pro 14" (3024x1964, 254ppi): calibrated by eye with the default gap.
+  { width: 3024, height: 1964, cutoutColumns: 348 },
   // MacBook Pro 16" (3456x2234, 254ppi): same camera module as the 14".
-  { width: 3456, height: 2234, cutoutColumns: 400 },
-  // MacBook Air 13.6" and 15" (224ppi): 400 x 224/254 ~= 353.
-  { width: 2560, height: 1664, cutoutColumns: 353 },
-  { width: 2880, height: 1864, cutoutColumns: 353 }
+  { width: 3456, height: 2234, cutoutColumns: 348 },
+  // MacBook Air 13.6" and 15" (224ppi): 348 x 224/254 ~= 307.
+  { width: 2560, height: 1664, cutoutColumns: 307 },
+  { width: 2880, height: 1864, cutoutColumns: 307 }
 ]
 
 // Unmeasured notched panels: the 14" cutout's share of its panel width.
-var fallbackWidthRatio = 400 / 3024
+var fallbackWidthRatio = 348 / 3024
 
 function isPlainObject(value) {
   return !!value && typeof value === "object" && !Array.isArray(value)

@@ -11,7 +11,7 @@ A fork of Omarchy's built-in bar (`omarchy.bar`) for Apple Silicon MacBooks with
 - `left` and `right` sections sit at the screen edges, as usual.
 - The `center` section hugs the notch. The plugin's zero-width **Notch divider** widget (`{ "id": "connor.bar" }` in `center`) decides which side each widget goes on: entries before it sit left of the notch, entries after it sit right.
 - Without the divider, `centerAnchor` ends the left side; without either, the first half goes left.
-- Drag widgets across the divider to switch sides. An island's inner side that has no widgets has no drop target, so use `omarchy bar move <id> --section center --index N` instead.
+- Drag widgets across the divider to switch sides. Each island's notch-facing edge is a drop target, even when that side has no widgets.
 
 ## Config (`~/.config/omarchy/shell.json`, under `bar`)
 
@@ -30,7 +30,7 @@ Toggle the split: `omarchy-shell omarchy.bar toggleNotchSplit`
 
 ## Calibrating the notch width
 
-The default for the 14" MacBook Pro (3024x1964) is an estimate of 400 physical pixels. Set `"gap": 0`, then adjust `"width"` until each island's inner edge just disappears under the cutout. Record the value in `measuredNotchPanels` in `NotchModel.js`.
+The 14" MacBook Pro (3024x1964) default of 348 physical pixels was calibrated by eye with the default gap: one pixel narrower and the background shows between the notch and the islands. Adjust `"width"` the same way on another panel. Record the value in `measuredNotchPanels` in `NotchModel.js`.
 
 ## Keeping up with Omarchy
 
