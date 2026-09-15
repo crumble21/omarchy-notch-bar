@@ -1101,9 +1101,11 @@ Item {
       return raw !== undefined && raw !== null && configured >= 0 ? Math.round(configured / notchScale) : fallback
     }
     readonly property int notchGap: notchPixels("gap", Style.space(6))
-    // Square by default: the cutout has its own rounded corners, and a rounded
-    // island corner beside them leaves a bumpy seam.
-    readonly property int notchRadius: notchPixels("radius", 0)
+    // How far each island's background reaches in under the cutout. The notch
+    // is opaque hardware, so only the wedge beside its rounded bottom corner
+    // shows, and the bar follows the notch's own curve. Widgets and input stay
+    // within the islands; the bleed never meets in the middle.
+    readonly property int notchBleed: Math.min(notchGap + notchPixels("bleed", Math.round(48 / notchScale)), notchGap + Math.floor(notchWidthPx / 2) - 1)
     readonly property bool splitActive: root.notchSplitEnabled && notchFloor > 0 && notchWidthPx > 0
     readonly property var islands: NotchModel.islandRects(width, notchWidthPx, notchGap)
 
@@ -1133,12 +1135,10 @@ Item {
         required property string modelData
         readonly property var rect: barWindow.islands[modelData]
 
-        x: rect.x
-        width: rect.width
+        x: modelData === "right" ? rect.x - barWindow.notchBleed : rect.x
+        width: rect.width + barWindow.notchBleed
         height: barWindow.height
         color: root.background
-        bottomLeftRadius: modelData === "right" ? barWindow.notchRadius : 0
-        bottomRightRadius: modelData === "left" ? barWindow.notchRadius : 0
       }
     }
     // notch-split: end

@@ -16,7 +16,7 @@ A fork of Omarchy's built-in bar (`omarchy.bar`) for Apple Silicon MacBooks with
 ## Config (`~/.config/omarchy/shell.json`, under `bar`)
 
 ```json
-"notch": { "split": true, "width": 348, "gap": 10, "radius": 0 }
+"notch": { "split": true, "width": 348, "gap": 10, "bleed": 48 }
 ```
 
 | Key | Default | Meaning |
@@ -24,7 +24,7 @@ A fork of Omarchy's built-in bar (`omarchy.bar`) for Apple Silicon MacBooks with
 | `split` | `true` | Split the bar around the notch |
 | `width` | `0` (auto) | Notch width in physical pixels |
 | `gap` | `Style.space(6)` | Space between each island and the notch, in physical pixels |
-| `radius` | `0` | Rounding of each island's notch-facing bottom corner, in physical pixels. Square sits flush with the cutout's own rounded corners |
+| `bleed` | `48` | How far each island's background reaches in under the notch, in physical pixels (past the gap). The notch hides it except beside its rounded bottom corners, so the bar follows the notch's curve. Widgets and clicks stay within the islands. `0` stops the background at the gap |
 
 Toggle the split: `omarchy-shell omarchy.bar toggleNotchSplit`
 
