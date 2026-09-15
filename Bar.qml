@@ -1095,12 +1095,15 @@ Item {
       if (configured > 0) return Math.ceil(configured / notchScale)
       return NotchModel.notchWidth(screen.name, screen.width, screen.height, screen.devicePixelRatio)
     }
-    readonly property int notchGap: {
-      var configured = Number(root.notchConfig.gap)
-      return configured >= 0 && root.notchConfig.gap !== undefined && root.notchConfig.gap !== null
-        ? Math.round(configured / notchScale)
-        : Style.space(6)
+    function notchPixels(key, fallback) {
+      var raw = root.notchConfig[key]
+      var configured = Number(raw)
+      return raw !== undefined && raw !== null && configured >= 0 ? Math.round(configured / notchScale) : fallback
     }
+    readonly property int notchGap: notchPixels("gap", Style.space(6))
+    // Square by default: the cutout has its own rounded corners, and a rounded
+    // island corner beside them leaves a bumpy seam.
+    readonly property int notchRadius: notchPixels("radius", 0)
     readonly property bool splitActive: root.notchSplitEnabled && notchFloor > 0 && notchWidthPx > 0
     readonly property var islands: NotchModel.islandRects(width, notchWidthPx, notchGap)
 
@@ -1134,8 +1137,8 @@ Item {
         width: rect.width
         height: barWindow.height
         color: root.background
-        bottomLeftRadius: modelData === "right" ? Style.cornerRadius : 0
-        bottomRightRadius: modelData === "left" ? Style.cornerRadius : 0
+        bottomLeftRadius: modelData === "right" ? barWindow.notchRadius : 0
+        bottomRightRadius: modelData === "left" ? barWindow.notchRadius : 0
       }
     }
     // notch-split: end
