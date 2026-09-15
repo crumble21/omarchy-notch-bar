@@ -1,17 +1,26 @@
 {
   "schemaVersion": 1,
   "id": "connor.bar",
-  "name": "My Bar",
+  "name": "Notch Bar",
   "version": "1.0.0",
   "author": "Omarchy",
-  "description": "Status bar with widgets",
+  "description": "Status bar that splits around the MacBook notch",
   "kinds": [
-    "bar"
+    "bar",
+    "bar-widget"
   ],
   "entryPoints": {
-    "bar": "Bar.qml"
+    "bar": "Bar.qml",
+    "barWidget": "NotchMarker.qml"
   },
   "omarchy": {
     "clonedFrom": "omarchy.bar"
+  },
+  "barWidget": {
+    "displayName": "Notch divider",
+    "description": "Center widgets before it sit left of the notch, after it right of the notch",
+    "category": "Layout",
+    "allowMultiple": false,
+    "defaultSection": "center"
   }
 }

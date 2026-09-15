@@ -7,6 +7,9 @@ import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
 import "BarModel.js" as BarModel
+// notch-split: begin
+import "NotchModel.js" as NotchModel
+// notch-split: end
 
 Item {
   id: root
@@ -746,6 +749,11 @@ Item {
         continue
       }
 
+      // notch-split: begin
+      // The marker has no visible slot but divides the notch sides, so a drop
+      // after the last left-side widget must stay in front of it.
+      if (name === root.notchMarkerId) return name
+      // notch-split: end
       if (visibleModuleSlot(region, name, sourceSlot)) return name
     }
 
@@ -971,6 +979,13 @@ Item {
     function syncHidden(): void {
       barHiddenProbe.running = true
     }
+
+    // notch-split: begin
+    function toggleNotchSplit(): string {
+      root.toggleNotchSplit()
+      return "ok"
+    }
+    // notch-split: end
   }
 
   Variants {
@@ -1052,16 +1067,64 @@ Item {
           : BarModel.notchHeight(screen.name, screen.width, screen.height, screen.devicePixelRatio))
       : 0
 
+    // notch-split: begin
+    // Calibration overrides are physical pixels, like [bar] notch-height.
+    readonly property real notchScale: screen && screen.devicePixelRatio > 0 ? screen.devicePixelRatio : 1
+    readonly property int notchWidthPx: {
+      var configured = Number(root.notchConfig.width)
+      if (configured > 0) return Math.ceil(configured / notchScale)
+      return NotchModel.notchWidth(screen.name, screen.width, screen.height, screen.devicePixelRatio)
+    }
+    readonly property int notchGap: {
+      var configured = Number(root.notchConfig.gap)
+      return configured >= 0 && root.notchConfig.gap !== undefined && root.notchConfig.gap !== null
+        ? Math.round(configured / notchScale)
+        : Style.space(6)
+    }
+    readonly property bool splitActive: root.notchSplitEnabled && notchFloor > 0 && notchWidthPx > 0
+    readonly property var islands: NotchModel.islandRects(width, notchWidthPx, notchGap)
+
+    mask: splitActive ? islandMask : null
+
+    Region {
+      id: islandMask
+      Region { x: barWindow.islands.left.x; y: 0; width: barWindow.islands.left.width; height: barWindow.height }
+      Region { x: barWindow.islands.right.x; y: 0; width: barWindow.islands.right.width; height: barWindow.height }
+    }
+    // notch-split: end
+
     implicitWidth: root.vertical ? root.barSize : 0
     implicitHeight: root.vertical ? 0 : Math.max(root.barSize, notchFloor)
-    color: root.transparent ? "transparent" : root.background
+    // notch-split: begin
+    color: root.transparent || splitActive ? "transparent" : root.background
+    // notch-split: end
     surfaceFormat.opaque: false
     WlrLayershell.namespace: "omarchy-bar"
     WlrLayershell.layer: WlrLayer.Top
 
+    // notch-split: begin
+    Repeater {
+      model: barWindow.splitActive && !root.transparent ? ["left", "right"] : []
+
+      BorderSurface {
+        required property string modelData
+        readonly property var rect: barWindow.islands[modelData]
+
+        x: rect.x
+        width: rect.width
+        height: barWindow.height
+        color: root.background
+        bottomLeftRadius: modelData === "right" ? Style.cornerRadius : 0
+        bottomRightRadius: modelData === "left" ? Style.cornerRadius : 0
+      }
+    }
+    // notch-split: end
+
     Loader {
       anchors.fill: parent
-      sourceComponent: root.vertical ? verticalBar : horizontalBar
+      // notch-split: begin
+      sourceComponent: root.vertical ? verticalBar : (barWindow.splitActive ? splitHorizontalBar : horizontalBar)
+      // notch-split: end
 
       // A child of the loader, not a sibling of the sections: an ancestor stays
       // hovered while the pointer is over a widget, where a sibling would lose
@@ -1159,6 +1222,65 @@ Item {
         }
       }
     }
+
+    // notch-split: begin
+    Component {
+      id: splitHorizontalBar
+
+      Item {
+        id: splitRoot
+        anchors.fill: parent
+
+        readonly property var split: root.centerSplit()
+
+        Item {
+          x: barWindow.islands.left.x
+          width: barWindow.islands.left.width
+          height: parent.height
+
+          CenterGestureArea { anchors.fill: parent }
+          HoverHandler { onHoveredChanged: root.setCenterSectionHovered(hovered) }
+
+          LeftModules {
+            anchors.left: parent.left
+            anchors.leftMargin: Style.space(8)
+            anchors.verticalCenter: parent.verticalCenter
+          }
+
+          ModuleList {
+            entries: splitRoot.split.before
+            region: "center"
+            anchors.right: parent.right
+            anchors.rightMargin: Style.space(4)
+            anchors.verticalCenter: parent.verticalCenter
+          }
+        }
+
+        Item {
+          x: barWindow.islands.right.x
+          width: barWindow.islands.right.width
+          height: parent.height
+
+          CenterGestureArea { anchors.fill: parent }
+          HoverHandler { onHoveredChanged: root.setCenterSectionHovered(hovered) }
+
+          ModuleList {
+            entries: splitRoot.split.after
+            region: "center"
+            anchors.left: parent.left
+            anchors.leftMargin: Style.space(4)
+            anchors.verticalCenter: parent.verticalCenter
+          }
+
+          RightModules {
+            anchors.right: parent.right
+            anchors.rightMargin: Style.space(8)
+            anchors.verticalCenter: parent.verticalCenter
+          }
+        }
+      }
+    }
+    // notch-split: end
 
     Component {
       id: verticalBar
@@ -1311,6 +1433,29 @@ Item {
     var idx = root.entryIndex(entries, root.centerAnchor)
     return idx === -1 ? null : entries[idx]
   }
+
+  // notch-split: begin
+  // On an Apple notched panel the top bar splits into two islands with nothing
+  // behind the camera cutout. The center section hugs the notch from both
+  // sides, divided by this plugin's own zero-width marker widget.
+  readonly property string notchMarkerId: manifest && manifest.id ? String(manifest.id) : "connor.bar"
+  readonly property var notchConfig: Util.isPlainObject(barConfig) && Util.isPlainObject(barConfig.notch) ? barConfig.notch : ({})
+  readonly property bool notchSplitEnabled: notchConfig.split !== false
+
+  function centerSplit() {
+    return NotchModel.splitCenter(root.layoutEntries("center"), root.notchMarkerId, root.centerAnchor)
+  }
+
+  function toggleNotchSplit() {
+    var next = !root.notchSplitEnabled
+    if (!root.shell || typeof root.shell.mutateShellConfig !== "function") return
+    root.shell.mutateShellConfig(function(config) {
+      if (!Util.isPlainObject(config.bar)) config.bar = {}
+      if (!Util.isPlainObject(config.bar.notch)) config.bar.notch = {}
+      config.bar.notch.split = next
+    })
+  }
+  // notch-split: end
 
   component LeftModules: ModuleList {
     entries: root.layoutEntries("left")
