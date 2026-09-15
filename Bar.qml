@@ -1086,19 +1086,27 @@ Item {
     // cutout height is this panel's minimum sensible top-bar height. An
     // intentionally taller bar still wins, and a calibrated [bar]
     // notch-height in shell.toml overrides the derived value.
+    // notch-split: begin
+    // Qt rounds a fractional output scale up to a whole devicePixelRatio (2 at
+    // 1.33), which breaks the physical-size lookups below. Hyprland reports
+    // the real scale.
+    readonly property var hyprMonitor: screen ? Hyprland.monitorFor(screen) : null
+    readonly property real notchScale: hyprMonitor && hyprMonitor.scale > 0
+      ? hyprMonitor.scale
+      : (screen && screen.devicePixelRatio > 0 ? screen.devicePixelRatio : 1)
     readonly property int notchFloor: root.appleSiliconHost && root.position === "top"
       ? (Style.bar.notchHeight > 0
           ? Style.bar.notchHeight
-          : BarModel.notchHeight(screen.name, screen.width, screen.height, screen.devicePixelRatio))
+          : BarModel.notchHeight(screen.name, screen.width, screen.height, notchScale))
       : 0
+    // notch-split: end
 
     // notch-split: begin
     // Calibration overrides are physical pixels, like [bar] notch-height.
-    readonly property real notchScale: screen && screen.devicePixelRatio > 0 ? screen.devicePixelRatio : 1
     readonly property int notchWidthPx: {
       var configured = Number(root.notchConfig.width)
       if (configured > 0) return Math.ceil(configured / notchScale)
-      return NotchModel.notchWidth(screen.name, screen.width, screen.height, screen.devicePixelRatio)
+      return NotchModel.notchWidth(screen.name, screen.width, screen.height, notchScale)
     }
     function notchPixels(key, fallback) {
       var raw = root.notchConfig[key]
