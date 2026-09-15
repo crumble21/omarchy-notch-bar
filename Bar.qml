@@ -402,7 +402,12 @@ Item {
     }
   }
 
-  onBarConfigChanged: applyBarConfig()
+  // notch-split: begin
+  onBarConfigChanged: {
+    applyBarConfig()
+    Qt.callLater(ensureNotchMarker)
+  }
+  // notch-split: end
 
   function layoutEntries(region) {
     var serial = barConfigSerial
@@ -1495,6 +1500,26 @@ Item {
 
     Component.onCompleted: root.notchDropEdges = root.notchDropEdges.concat([dropEdge])
     Component.onDestruction: root.notchDropEdges = root.notchDropEdges.filter(function(edge) { return edge !== dropEdge })
+  }
+
+  // The divider shares the bar's plugin id, which `omarchy bar put` treats as
+  // already placed, so the bar adds it itself where the fallback split already
+  // divides. Nothing moves, and dragging across the notch has a boundary.
+  function ensureNotchMarker() {
+    if (!Util.isPlainObject(barConfig)) return
+    if (!root.shell || typeof root.shell.mutateShellConfig !== "function") return
+    var layout = Util.isPlainObject(barConfig.layout) ? barConfig.layout : null
+    if (layout && NotchModel.notchMarkerInsertIndex(layout.center, root.notchMarkerId, root.centerAnchor) === -1) return
+
+    root.shell.mutateShellConfig(function(config) {
+      if (!Util.isPlainObject(config.bar)) config.bar = {}
+      if (!Util.isPlainObject(config.bar.layout)) config.bar.layout = {}
+      if (!Array.isArray(config.bar.layout.center)) config.bar.layout.center = []
+      var center = config.bar.layout.center
+      var anchor = Util.canonicalWidgetId(config.bar.centerAnchor || "")
+      var index = NotchModel.notchMarkerInsertIndex(center, root.notchMarkerId, anchor)
+      if (index !== -1) center.splice(index, 0, { id: root.notchMarkerId })
+    })
   }
 
   function toggleNotchSplit() {

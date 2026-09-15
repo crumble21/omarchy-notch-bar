@@ -119,8 +119,21 @@ function notchDropBefore(entries, markerId, anchorId, side) {
   return ""
 }
 
+// Where to add the marker to a center section that lacks one (-1 when it is
+// already there). Inserting at the point splitCenter's fallback already
+// divides at keeps every widget on the side of the notch it was on.
+function notchMarkerInsertIndex(entries, markerId, anchorId) {
+  var list = Array.isArray(entries) ? entries : []
+  var split = splitCenter(list, markerId, anchorId)
+  for (var i = 0; i < list.length; i++) {
+    if (entryId(list[i]) === markerId) return -1
+  }
+  return split.before.length
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
+    notchMarkerInsertIndex: notchMarkerInsertIndex,
     measuredNotchPanels: measuredNotchPanels,
     notchWidth: notchWidth,
     islandRects: islandRects,

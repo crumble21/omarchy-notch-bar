@@ -128,6 +128,29 @@ check('without a marker the right edge appends', () => {
   assert.strictEqual(notch.notchDropBefore([{ id: 'a' }, { id: 'b' }], 'marker', '', 'right'), '')
 })
 
+// notchMarkerInsertIndex ---------------------------------------------------
+
+check('a center section that already has the marker needs no insert', () => {
+  assert.strictEqual(notch.notchMarkerInsertIndex(center, 'marker', ''), -1)
+})
+
+check('the marker is inserted where the fallback split already divides', () => {
+  const entries = [{ id: 'a' }, { id: 'b' }, { id: 'c' }]
+  const index = notch.notchMarkerInsertIndex(entries, 'marker', '')
+  assert.strictEqual(index, 2)
+  const withMarker = entries.slice(0, index).concat([{ id: 'marker' }], entries.slice(index))
+  assert.deepStrictEqual(notch.splitCenter(withMarker, 'marker', ''), notch.splitCenter(entries, 'marker', ''))
+})
+
+check('the marker is inserted right after a center anchor', () => {
+  assert.strictEqual(notch.notchMarkerInsertIndex([{ id: 'a' }, { id: 'b' }, { id: 'c' }], 'marker', 'a'), 1)
+})
+
+check('an empty or missing center section gets the marker at the start', () => {
+  assert.strictEqual(notch.notchMarkerInsertIndex([], 'marker', ''), 0)
+  assert.strictEqual(notch.notchMarkerInsertIndex(undefined, 'marker', ''), 0)
+})
+
 if (failures > 0) {
   console.log('\n' + failures + ' failing')
   process.exit(1)
