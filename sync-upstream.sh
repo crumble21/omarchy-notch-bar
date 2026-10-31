@@ -2,8 +2,8 @@
 # Merge upstream omarchy.bar changes into this fork.
 #
 # upstream-base/ holds the upstream files the fork was last synced from. Each
-# run 3-way merges upstream's changes since then into Bar.qml, takes
-# BarModel.js verbatim (it is unmodified here), and advances the base.
+# run 3-way merges upstream's changes since then into Bar.qml and BarModel.js,
+# and advances the base.
 
 set -euo pipefail
 
@@ -24,13 +24,13 @@ fi
 
 status=0
 git merge-file -L fork -L base -L upstream Bar.qml upstream-base/Bar.qml "$upstream_dir/Bar.qml" || status=$?
+git merge-file -L fork -L base -L upstream BarModel.js upstream-base/BarModel.js "$upstream_dir/BarModel.js" || status=$?
 
 cp "$upstream_dir/Bar.qml" "$upstream_dir/BarModel.js" upstream-base/
-cp "$upstream_dir/BarModel.js" BarModel.js
 printf 'source: %s\nomarchy: %s\n' "$upstream_dir" "$(cat "$OMARCHY_PATH/version")" >UPSTREAM
 
 if (( status > 0 )); then
-  echo "Merged with $status conflict(s) in Bar.qml; resolve the <<<<<<< markers, then commit"
+  echo "Merged with $status conflict(s) in Bar.qml / BarModel.js; resolve the <<<<<<< markers, then commit"
   exit 1
 fi
 

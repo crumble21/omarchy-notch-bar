@@ -186,7 +186,7 @@ function ownRoomTarget(rows, axis, vertical, source) {
 // room the dragged widget (`source`, a candidate's slot) still holds, a drop
 // puts it back, so a widget picked up beside an empty box, whose reach
 // covers its inner end, isn't thrown into it as the drag starts.
-function centerDropTarget(candidates, box, point, vertical, source) {
+function centerDropTarget(candidates, box, point, vertical, source, boundaries) {
   var rows = Array.isArray(candidates) ? candidates : []
   if (!box) return nearestDropTarget(rows, point, vertical)
   var axis = vertical ? Number(point && point.y) : Number(point && point.x)
@@ -203,8 +203,15 @@ function centerDropTarget(candidates, box, point, vertical, source) {
   }
 
   var outside = nearestEdge(rows.filter(function(row) { return row && row.region !== "center" }), axis, vertical)
-  var beginDistance = Math.abs(axis - start)
-  var endDistance = Math.abs(axis - end)
+  // notch-split: begin
+  var bounds = (typeof boundaries !== "undefined" && boundaries) || box
+  var beginEdge = bounds && isFinite(bounds.beginEdge) ? Number(bounds.beginEdge)
+    : (bounds && isFinite(bounds.begin) ? Number(bounds.begin) : start)
+  var endEdge = bounds && isFinite(bounds.endEdge) ? Number(bounds.endEdge)
+    : (bounds && isFinite(bounds.end) ? Number(bounds.end) : end)
+  var beginDistance = Math.abs(axis - beginEdge)
+  var endDistance = Math.abs(axis - endEdge)
+  // notch-split: end
   var edge = beginDistance <= endDistance
     ? { target: { region: "centerBegin", after: true }, distance: beginDistance }
     : { target: { region: "centerEnd", after: false }, distance: endDistance }
@@ -220,9 +227,14 @@ function centerDropZone(box, reach, vertical) {
   var length = Number(vertical ? box.height : box.width)
   var grown = Math.max(length, Number(reach) || 0)
   var shift = (length - grown) / 2
-  return vertical
+  // notch-split: begin
+  var zone = vertical
     ? { x: box.x, y: box.y + shift, width: box.width, height: grown }
     : { x: box.x + shift, y: box.y, width: grown, height: box.height }
+  if (box && isFinite(box.beginEdge)) zone.beginEdge = Number(box.beginEdge)
+  if (box && isFinite(box.endEdge)) zone.endEdge = Number(box.endEdge)
+  return zone
+  // notch-split: end
 }
 
 // The stretch of the bar over which a drop lands in the tray's drawer

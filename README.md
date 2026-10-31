@@ -107,7 +107,7 @@ The running shell does not reload `Bar.qml` or `NotchModel.js` edits; run `omarc
 `upstream-base/` holds the Omarchy bar this fork last synced from, and `UPSTREAM` records the version. After an Omarchy update:
 
 ```bash
-./sync-upstream.sh              # 3-way merges upstream Bar.qml changes, refreshes BarModel.js
+./sync-upstream.sh              # 3-way merges upstream Bar.qml and BarModel.js changes
 node test/notch-model-test.js
 omarchy-restart-shell           # then check the bar
 ```

@@ -517,7 +517,15 @@ Item {
     if (!box) return null
     try {
       var point = box.mapToItem(null, 0, 0)
-      return BarModel.centerDropZone({ x: point.x, y: point.y, width: box.width, height: box.height }, box.crossSize, root.vertical)
+      // notch-split: begin
+      var boxInput = { x: point.x, y: point.y, width: box.width, height: box.height }
+      if (box.window && box.window.splitActive && box.window.islands && box.window.contentItem) {
+        var leftIslandPoint = box.window.contentItem.mapToItem(null, box.window.islands.left.x + box.window.islands.left.width - Style.space(4), 0)
+        boxInput.beginEdge = root.vertical ? leftIslandPoint.y : leftIslandPoint.x
+        boxInput.endEdge = root.vertical ? point.y + box.height : point.x + box.width
+      }
+      return BarModel.centerDropZone(boxInput, box.crossSize, root.vertical)
+      // notch-split: end
     } catch (e) {
       return null
     }
@@ -2813,6 +2821,9 @@ Item {
     // Key -> its WidgetHost, and the ModuleSlot showing it.
     property var hosts: ({})
     property var slots: ({})
+    // notch-split: begin
+    property var slotPool: ({})
+    // notch-split: end
 
     width: 0
     height: 0
@@ -2822,6 +2833,13 @@ Item {
     // had it, whichever of the two lists changes first.
     function claim(slot) {
       var key = slot.widgetKey
+      // notch-split: begin
+      var list = slotPool[key] || []
+      var idx = list.indexOf(slot)
+      if (idx !== -1) list.splice(idx, 1)
+      list.push(slot)
+      slotPool[key] = list
+      // notch-split: end
       var last = slots[key]
       if (last && last !== slot) last.host = null
       slots[key] = slot
@@ -2832,10 +2850,35 @@ Item {
 
     function release(slot) {
       var key = slot.widgetKey
-      if (slots[key] !== slot) return
-      delete slots[key]
+      // notch-split: begin
+      var list = slotPool[key] || []
+      var idx = list.indexOf(slot)
+      if (idx !== -1) {
+        list.splice(idx, 1)
+        if (list.length === 0) delete slotPool[key]
+        else slotPool[key] = list
+      }
       slot.host = null
-      if (hosts[key]) hosts[key].owner = null
+      if (slots[key] !== slot) return
+
+      var survivor = null
+      for (var i = list.length - 1; i >= 0; i--) {
+        if (list[i]) {
+          survivor = list[i]
+          break
+        }
+      }
+
+      if (survivor) {
+        slots[key] = survivor
+        var host = hosts[key] || null
+        survivor.host = host
+        if (host) host.owner = survivor
+      } else {
+        delete slots[key]
+        if (hosts[key]) hosts[key].owner = null
+      }
+      // notch-split: end
     }
 
     function addHost(host) {
