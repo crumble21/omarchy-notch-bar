@@ -68,87 +68,19 @@ check('islands clamp to zero width instead of going negative', () => {
   assert.strictEqual(r.right.width, 0)
 })
 
-// splitCenter --------------------------------------------------------------
+// notchHeight --------------------------------------------------------------
 
-const ids = entries => entries.map(e => e.id)
-const center = [{ id: 'a' }, { id: 'b' }, { id: 'marker' }, { id: 'c' }]
-
-check('the marker splits center entries and is dropped from both sides', () => {
-  const s = notch.splitCenter(center, 'marker', '')
-  assert.deepStrictEqual(ids(s.before), ['a', 'b'])
-  assert.deepStrictEqual(ids(s.after), ['c'])
+check('a measured panel gets its exact cutout depth', () => {
+  assert.strictEqual(notch.notchHeight('eDP-1', 1728, 1117, 2), 32)
 })
 
-check('the marker wins over a center anchor', () => {
-  const s = notch.splitCenter(center, 'marker', 'c')
-  assert.deepStrictEqual(ids(s.before), ['a', 'b'])
+check('an unmeasured notched panel gets the whole strip', () => {
+  assert.ok(notch.notchHeight('eDP-1', 1536, 990, 2) > 0)
 })
 
-check('without a marker the anchor ends the left side', () => {
-  const s = notch.splitCenter([{ id: 'a' }, { id: 'b' }, { id: 'c' }], 'marker', 'b')
-  assert.deepStrictEqual(ids(s.before), ['a', 'b'])
-  assert.deepStrictEqual(ids(s.after), ['c'])
-})
-
-check('without marker or anchor the first half (rounded up) goes left', () => {
-  const s = notch.splitCenter([{ id: 'a' }, { id: 'b' }, { id: 'c' }], 'marker', '')
-  assert.deepStrictEqual(ids(s.before), ['a', 'b'])
-  assert.deepStrictEqual(ids(s.after), ['c'])
-})
-
-check('string entries and non-arrays are tolerated', () => {
-  assert.deepStrictEqual(notch.splitCenter(['a', 'marker', 'b'], 'marker', '').after, ['b'])
-  assert.deepStrictEqual(notch.splitCenter(null, 'marker', ''), { before: [], after: [] })
-})
-
-// notchDropBefore ----------------------------------------------------------
-
-check('dropping on the left notch edge lands just before the marker', () => {
-  assert.strictEqual(notch.notchDropBefore(center, 'marker', '', 'left'), 'marker')
-})
-
-check('dropping on the right notch edge lands just after the marker', () => {
-  assert.strictEqual(notch.notchDropBefore(center, 'marker', '', 'right'), 'c')
-})
-
-check('dropping on the right notch edge with nothing after the marker appends', () => {
-  assert.strictEqual(notch.notchDropBefore([{ id: 'a' }, { id: 'marker' }], 'marker', '', 'right'), '')
-})
-
-check('dropping on the left notch edge of an empty left side still lands before the marker', () => {
-  assert.strictEqual(notch.notchDropBefore([{ id: 'marker' }, { id: 'c' }], 'marker', '', 'left'), 'marker')
-})
-
-check('without a marker the left edge lands before the first right-side entry', () => {
-  assert.strictEqual(notch.notchDropBefore([{ id: 'a' }, { id: 'b' }, { id: 'c' }], 'marker', 'b', 'left'), 'c')
-  assert.strictEqual(notch.notchDropBefore([{ id: 'a' }], 'marker', 'a', 'left'), '')
-})
-
-check('without a marker the right edge appends', () => {
-  assert.strictEqual(notch.notchDropBefore([{ id: 'a' }, { id: 'b' }], 'marker', '', 'right'), '')
-})
-
-// notchMarkerInsertIndex ---------------------------------------------------
-
-check('a center section that already has the marker needs no insert', () => {
-  assert.strictEqual(notch.notchMarkerInsertIndex(center, 'marker', ''), -1)
-})
-
-check('the marker is inserted where the fallback split already divides', () => {
-  const entries = [{ id: 'a' }, { id: 'b' }, { id: 'c' }]
-  const index = notch.notchMarkerInsertIndex(entries, 'marker', '')
-  assert.strictEqual(index, 2)
-  const withMarker = entries.slice(0, index).concat([{ id: 'marker' }], entries.slice(index))
-  assert.deepStrictEqual(notch.splitCenter(withMarker, 'marker', ''), notch.splitCenter(entries, 'marker', ''))
-})
-
-check('the marker is inserted right after a center anchor', () => {
-  assert.strictEqual(notch.notchMarkerInsertIndex([{ id: 'a' }, { id: 'b' }, { id: 'c' }], 'marker', 'a'), 1)
-})
-
-check('an empty or missing center section gets the marker at the start', () => {
-  assert.strictEqual(notch.notchMarkerInsertIndex([], 'marker', ''), 0)
-  assert.strictEqual(notch.notchMarkerInsertIndex(undefined, 'marker', ''), 0)
+check('external monitors and 16:10 panels have no cutout depth', () => {
+  assert.strictEqual(notch.notchHeight('DP-1', 1728, 1117, 2), 0)
+  assert.strictEqual(notch.notchHeight('eDP-1', 1280, 800, 2), 0)
 })
 
 if (failures > 0) {

@@ -16,7 +16,7 @@ No other dependencies: it uses only what Omarchy ships (its Quickshell shell and
 
 ## What it changes
 
-The plugin writes to `~/.config/omarchy/shell.json` only when you ask it to: `placeNotchDivider`, `toggleNotchSplit`, or dragging widgets (the built-in bar's own behavior).
+The plugin writes to `~/.config/omarchy/shell.json` only when you ask it to: `toggleNotchSplit`, or dragging widgets (the built-in bar's own behavior).
 
 ## Install
 
@@ -26,25 +26,17 @@ omarchy plugin add https://github.com/crumble21/omarchy-notch-bar.git --enable
 
 `--enable` makes it the active bar. Your layout is left exactly as it was: the plugin never edits your config on its own.
 
-Optionally, add the **Notch divider** to choose which center widgets sit on which side of the notch (see Placing widgets):
-
-```bash
-omarchy-shell omarchy.bar placeNotchDivider
-```
-
-It goes where the automatic split already divides, so nothing moves.
-
 To switch back to the built-in bar without uninstalling: `omarchy bar use omarchy.bar`. Your layout stays as it is, and `omarchy bar use io.github.crumble21.notch-bar` switches back again.
 
 ## Placing widgets
 
 ```
-[left …]      [center, before divider] ▐notch▌ [center, after divider]      [… right]
+[left … centerBegin] ▐notch▌ [center … centerEnd … right]
 ```
 
-- `left` and `right` sections sit at the screen edges, as usual.
-- The `center` section sits against the notch. Widgets before the Notch divider go on the left side of the notch; widgets after it go on the right. Without the divider, the first half of the center widgets goes left (or everything up to `centerAnchor`, if you set one).
-- Drag widgets to rearrange them. Each island's notch-facing edge is a drop target, even when that side of the notch is empty.
+- The left island holds the `left` section, then `centerBegin` against the notch.
+- The right island holds the `center` section against the notch, then `centerEnd`, then the `right` section at the screen edge.
+- Drag widgets between sections as usual; the sections are the built-in bar's.
 
 ## Config
 
@@ -86,7 +78,7 @@ The notch geometry is in physical pixels, so it holds at any display scale and t
 
    Omarchy keeps a backup of the removed plugin as `~/.config/omarchy/plugins/.io.github.crumble21.notch-bar.bak.<timestamp>/`. Delete it once you are sure.
 
-2. Clean up what the plugin left in `~/.config/omarchy/shell.json`: the Notch divider entry in your layout and the `bar.notch` settings. The built-in bar ignores both, so this is tidying rather than required. The shell reloads the file on save.
+2. Clean up what the plugin left in `~/.config/omarchy/shell.json`: the `bar.notch` settings. The built-in bar ignores them, so this is tidying rather than required. The shell reloads the file on save.
 
    ```bash
    cp ~/.config/omarchy/shell.json ~/.config/omarchy/shell.json.bak
@@ -105,8 +97,7 @@ node test/notch-model-test.js   # geometry and layout tests
 omarchy plugin validate .
 ```
 
-- `NotchModel.js` holds the notch geometry and layout rules as pure functions.
-- `NotchMarker.qml` is the zero-width divider widget.
+- `NotchModel.js` holds the notch geometry as pure functions.
 - `Bar.qml` is Omarchy's bar with every change fenced by `// notch-split: begin` / `// notch-split: end`.
 
 The running shell does not reload `Bar.qml` or `NotchModel.js` edits; run `omarchy-restart-shell`.
