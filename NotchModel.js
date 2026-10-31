@@ -7,33 +7,23 @@
 // the same ppi family share a width and lower-ppi panels span fewer columns.
 var measuredNotchPanels = [
   // MacBook Pro 14" (3024x1964, 254ppi): calibrated by eye with the default gap.
-  { width: 3024, height: 1964, cutoutColumns: 348 },
+  { width: 3024, height: 1964, cutoutColumns: 348, cutoutRows: 64 },
   // MacBook Pro 16" (3456x2234, 254ppi): same camera module as the 14".
-  { width: 3456, height: 2234, cutoutColumns: 348 },
+  { width: 3456, height: 2234, cutoutColumns: 348, cutoutRows: 64 },
   // MacBook Air 13.6" and 15" (224ppi): 348 x 224/254 ~= 307.
-  { width: 2560, height: 1664, cutoutColumns: 307 },
-  { width: 2880, height: 1864, cutoutColumns: 307 }
+  { width: 2560, height: 1664, cutoutColumns: 307, cutoutRows: 56 },
+  { width: 2880, height: 1864, cutoutColumns: 307, cutoutRows: 56 }
 ]
 
 // Unmeasured notched panels: the 14" cutout's share of its panel width.
 var fallbackWidthRatio = 348 / 3024
 
-function isPlainObject(value) {
-  return !!value && typeof value === "object" && !Array.isArray(value)
-}
-
-function entryId(entry) {
-  if (typeof entry === "string") return entry
-  if (isPlainObject(entry) && entry.id !== undefined && entry.id !== null) return String(entry.id)
-  return ""
-}
-
-function measuredCutoutColumns(physicalWidth, physicalHeight) {
+function measuredCutoutRows(physicalWidth, physicalHeight, key) {
   for (var i = 0; i < measuredNotchPanels.length; i++) {
     var panel = measuredNotchPanels[i]
     // Logical sizes are rounded, so allow a few pixels at fractional scales.
     if (Math.abs(physicalWidth - panel.width) <= 4 && Math.abs(physicalHeight - panel.height) <= 4)
-      return panel.cutoutColumns
+      return panel[key]
   }
   return 0
 }
@@ -52,9 +42,30 @@ function notchWidth(screenName, logicalWidth, logicalHeight, devicePixelRatio) {
   if (strip <= 0 || strip > height / 20) return 0
 
   var scale = Number(devicePixelRatio) > 0 ? Number(devicePixelRatio) : 1
-  var columns = measuredCutoutColumns(Math.round(width * scale), Math.round(height * scale))
+  var columns = measuredCutoutRows(Math.round(width * scale), Math.round(height * scale), "cutoutColumns")
   if (columns > 0) return Math.ceil(columns / scale)
   return Math.ceil(width * fallbackWidthRatio)
+}
+
+// Logical height of the camera cutout, or 0 when the screen has none. Panels
+// expose more rows above the 16:10 area than the cutout covers, so a measured
+// panel gets its exact depth and others the whole strip.
+function notchHeight(screenName, logicalWidth, logicalHeight, devicePixelRatio) {
+  if (String(screenName || "").indexOf("eDP") !== 0) return 0
+
+  var width = Number(logicalWidth)
+  var height = Number(logicalHeight)
+  if (!(width > 0) || !(height > 0)) return 0
+
+  var strip = height - (width * 10) / 16
+  if (strip <= 0 || strip > height / 20) return 0
+
+  var scale = Number(devicePixelRatio)
+  if (scale > 0) {
+    var rows = measuredCutoutRows(Math.round(width * scale), Math.round(height * scale), "cutoutRows")
+    if (rows > 0) return Math.ceil(rows / scale)
+  }
+  return Math.ceil(strip)
 }
 
 // Left and right island spans for a bar of screenWidth with a centered notch.
@@ -73,71 +84,11 @@ function islandRects(screenWidth, notchWidthValue, gap) {
   }
 }
 
-// Split the center section into the entries that hug the notch from the left
-// (before) and from the right (after). The notch marker entry is the divider
-// and belongs to neither side. Without one, a center anchor ends the left
-// side; without either, the first half (rounded up) goes left.
-function splitCenter(entries, markerId, anchorId) {
-  if (!Array.isArray(entries)) return { before: [], after: [] }
-
-  var marker = -1
-  var anchor = -1
-  for (var i = 0; i < entries.length; i++) {
-    var id = entryId(entries[i])
-    if (marker === -1 && markerId && id === markerId) marker = i
-    if (anchor === -1 && anchorId && id === anchorId) anchor = i
-  }
-
-  if (marker !== -1)
-    return { before: entries.slice(0, marker), after: entries.slice(marker + 1) }
-  if (anchor !== -1)
-    return { before: entries.slice(0, anchor + 1), after: entries.slice(anchor + 1) }
-
-  var half = Math.ceil(entries.length / 2)
-  return { before: entries.slice(0, half), after: entries.slice(half) }
-}
-
-// Center-section entry id a widget dropped on a notch-facing island edge is
-// inserted in front of ("" appends). The edges are drop targets even when that
-// side of the notch is empty, which a drop onto neighbouring slots can't reach.
-function notchDropBefore(entries, markerId, anchorId, side) {
-  var list = Array.isArray(entries) ? entries : []
-  var marker = -1
-  for (var i = 0; i < list.length; i++) {
-    if (markerId && entryId(list[i]) === markerId) { marker = i; break }
-  }
-
-  if (marker !== -1) {
-    if (side === "left") return markerId
-    return marker + 1 < list.length ? entryId(list[marker + 1]) : ""
-  }
-
-  if (side === "left") {
-    var after = splitCenter(list, markerId, anchorId).after
-    return after.length > 0 ? entryId(after[0]) : ""
-  }
-  return ""
-}
-
-// Where to add the marker to a center section that lacks one (-1 when it is
-// already there). Inserting at the point splitCenter's fallback already
-// divides at keeps every widget on the side of the notch it was on.
-function notchMarkerInsertIndex(entries, markerId, anchorId) {
-  var list = Array.isArray(entries) ? entries : []
-  var split = splitCenter(list, markerId, anchorId)
-  for (var i = 0; i < list.length; i++) {
-    if (entryId(list[i]) === markerId) return -1
-  }
-  return split.before.length
-}
-
 if (typeof module !== "undefined") {
   module.exports = {
-    notchMarkerInsertIndex: notchMarkerInsertIndex,
     measuredNotchPanels: measuredNotchPanels,
+    notchHeight: notchHeight,
     notchWidth: notchWidth,
-    islandRects: islandRects,
-    splitCenter: splitCenter,
-    notchDropBefore: notchDropBefore
+    islandRects: islandRects
   }
 }

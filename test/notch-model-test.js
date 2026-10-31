@@ -3,6 +3,7 @@
 const assert = require('assert')
 const path = require('path')
 const notch = require(path.join(__dirname, '..', 'NotchModel.js'))
+const bar = require(path.join(__dirname, '..', 'BarModel.js'))
 
 let failures = 0
 function check(name, fn) {
@@ -68,87 +69,131 @@ check('islands clamp to zero width instead of going negative', () => {
   assert.strictEqual(r.right.width, 0)
 })
 
-// splitCenter --------------------------------------------------------------
+// notchHeight --------------------------------------------------------------
 
-const ids = entries => entries.map(e => e.id)
-const center = [{ id: 'a' }, { id: 'b' }, { id: 'marker' }, { id: 'c' }]
-
-check('the marker splits center entries and is dropped from both sides', () => {
-  const s = notch.splitCenter(center, 'marker', '')
-  assert.deepStrictEqual(ids(s.before), ['a', 'b'])
-  assert.deepStrictEqual(ids(s.after), ['c'])
+check('a measured panel gets its exact cutout depth', () => {
+  assert.strictEqual(notch.notchHeight('eDP-1', 1728, 1117, 2), 32)
 })
 
-check('the marker wins over a center anchor', () => {
-  const s = notch.splitCenter(center, 'marker', 'c')
-  assert.deepStrictEqual(ids(s.before), ['a', 'b'])
+check('an unmeasured notched panel gets the whole strip', () => {
+  assert.ok(notch.notchHeight('eDP-1', 1536, 990, 2) > 0)
 })
 
-check('without a marker the anchor ends the left side', () => {
-  const s = notch.splitCenter([{ id: 'a' }, { id: 'b' }, { id: 'c' }], 'marker', 'b')
-  assert.deepStrictEqual(ids(s.before), ['a', 'b'])
-  assert.deepStrictEqual(ids(s.after), ['c'])
+check('external monitors and 16:10 panels have no cutout depth', () => {
+  assert.strictEqual(notch.notchHeight('DP-1', 1728, 1117, 2), 0)
+  assert.strictEqual(notch.notchHeight('eDP-1', 1280, 800, 2), 0)
 })
 
-check('without marker or anchor the first half (rounded up) goes left', () => {
-  const s = notch.splitCenter([{ id: 'a' }, { id: 'b' }, { id: 'c' }], 'marker', '')
-  assert.deepStrictEqual(ids(s.before), ['a', 'b'])
-  assert.deepStrictEqual(ids(s.after), ['c'])
+// split layout centerDropTarget --------------------------------------------
+
+check('empty centerBegin with split boundaries lands in centerBegin near notch', () => {
+  const box = { x: 1700, y: 0, width: 100, height: 32, beginEdge: 1324, endEdge: 1800 }
+  const slotLeft = { id: 'leftWidget' }
+  const candidates = [
+    { slot: slotLeft, region: 'left', x: 8, y: 0, width: 1092, height: 32 }
+  ]
+  const target = bar.centerDropTarget(candidates, box, { x: 1300, y: 16 }, false, null)
+  assert.deepStrictEqual(target, { region: 'centerBegin', after: true })
 })
 
-check('string entries and non-arrays are tolerated', () => {
-  assert.deepStrictEqual(notch.splitCenter(['a', 'marker', 'b'], 'marker', '').after, ['b'])
-  assert.deepStrictEqual(notch.splitCenter(null, 'marker', ''), { before: [], after: [] })
+check('drop beside right-hand box does not cross notch into centerBegin', () => {
+  const box = { x: 1700, y: 0, width: 100, height: 32, beginEdge: 1324, endEdge: 1800 }
+  const slotLeft = { id: 'leftWidget' }
+  const candidates = [
+    { slot: slotLeft, region: 'left', x: 8, y: 0, width: 1092, height: 32 }
+  ]
+  const target = bar.centerDropTarget(candidates, box, { x: 1690, y: 16 }, false, null)
+  assert.notDeepStrictEqual(target && target.region, 'centerBegin')
 })
 
-// notchDropBefore ----------------------------------------------------------
-
-check('dropping on the left notch edge lands just before the marker', () => {
-  assert.strictEqual(notch.notchDropBefore(center, 'marker', '', 'left'), 'marker')
+check('centerDropTarget falls back to box edges when no split boundaries given', () => {
+  const box = { x: 1000, y: 0, width: 100, height: 32 }
+  const target = bar.centerDropTarget([], box, { x: 950, y: 16 }, false, null)
+  assert.deepStrictEqual(target, { region: 'centerBegin', after: true })
 })
 
-check('dropping on the right notch edge lands just after the marker', () => {
-  assert.strictEqual(notch.notchDropBefore(center, 'marker', '', 'right'), 'c')
+check('centerDropZone preserves beginEdge and endEdge boundaries', () => {
+  const zone = bar.centerDropZone({ x: 1700, y: 0, width: 100, height: 32, beginEdge: 1324, endEdge: 1800 }, 32, false)
+  assert.strictEqual(zone.beginEdge, 1324)
+  assert.strictEqual(zone.endEdge, 1800)
 })
 
-check('dropping on the right notch edge with nothing after the marker appends', () => {
-  assert.strictEqual(notch.notchDropBefore([{ id: 'a' }, { id: 'marker' }], 'marker', '', 'right'), '')
-})
+// drawer slot pool ownership -----------------------------------------------
 
-check('dropping on the left notch edge of an empty left side still lands before the marker', () => {
-  assert.strictEqual(notch.notchDropBefore([{ id: 'marker' }, { id: 'c' }], 'marker', '', 'left'), 'marker')
-})
+check('releasing owner slot reclaims surviving drawer slot from the pool', () => {
+  const hosts = {}
+  const slots = {}
+  const slotPool = {}
 
-check('without a marker the left edge lands before the first right-side entry', () => {
-  assert.strictEqual(notch.notchDropBefore([{ id: 'a' }, { id: 'b' }, { id: 'c' }], 'marker', 'b', 'left'), 'c')
-  assert.strictEqual(notch.notchDropBefore([{ id: 'a' }], 'marker', 'a', 'left'), '')
-})
+  function claim(slot) {
+    const key = slot.widgetKey
+    const list = slotPool[key] || []
+    const idx = list.indexOf(slot)
+    if (idx !== -1) list.splice(idx, 1)
+    list.push(slot)
+    slotPool[key] = list
+    const last = slots[key]
+    if (last && last !== slot) last.host = null
+    slots[key] = slot
+    const host = hosts[key] || null
+    slot.host = host
+    if (host) host.owner = slot
+  }
 
-check('without a marker the right edge appends', () => {
-  assert.strictEqual(notch.notchDropBefore([{ id: 'a' }, { id: 'b' }], 'marker', '', 'right'), '')
-})
+  function release(slot) {
+    const key = slot.widgetKey
+    const list = slotPool[key] || []
+    const idx = list.indexOf(slot)
+    if (idx !== -1) {
+      list.splice(idx, 1)
+      if (list.length === 0) delete slotPool[key]
+      else slotPool[key] = list
+    }
+    slot.host = null
+    if (slots[key] !== slot) return
 
-// notchMarkerInsertIndex ---------------------------------------------------
+    let survivor = null
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (list[i]) {
+        survivor = list[i]
+        break
+      }
+    }
 
-check('a center section that already has the marker needs no insert', () => {
-  assert.strictEqual(notch.notchMarkerInsertIndex(center, 'marker', ''), -1)
-})
+    if (survivor) {
+      slots[key] = survivor
+      const host = hosts[key] || null
+      survivor.host = host
+      if (host) host.owner = survivor
+    } else {
+      delete slots[key]
+      if (hosts[key]) hosts[key].owner = null
+    }
+  }
 
-check('the marker is inserted where the fallback split already divides', () => {
-  const entries = [{ id: 'a' }, { id: 'b' }, { id: 'c' }]
-  const index = notch.notchMarkerInsertIndex(entries, 'marker', '')
-  assert.strictEqual(index, 2)
-  const withMarker = entries.slice(0, index).concat([{ id: 'marker' }], entries.slice(index))
-  assert.deepStrictEqual(notch.splitCenter(withMarker, 'marker', ''), notch.splitCenter(entries, 'marker', ''))
-})
+  const host = { key: 'audio', owner: null }
+  hosts[host.key] = host
+  const slotA = { widgetKey: 'audio', name: 'slotA', host: null }
+  const slotB = { widgetKey: 'audio', name: 'slotB', host: null }
 
-check('the marker is inserted right after a center anchor', () => {
-  assert.strictEqual(notch.notchMarkerInsertIndex([{ id: 'a' }, { id: 'b' }, { id: 'c' }], 'marker', 'a'), 1)
-})
+  claim(slotA)
+  assert.strictEqual(slotA.host, host)
+  assert.strictEqual(host.owner, slotA)
 
-check('an empty or missing center section gets the marker at the start', () => {
-  assert.strictEqual(notch.notchMarkerInsertIndex([], 'marker', ''), 0)
-  assert.strictEqual(notch.notchMarkerInsertIndex(undefined, 'marker', ''), 0)
+  claim(slotB)
+  assert.strictEqual(slotA.host, null)
+  assert.strictEqual(slotB.host, host)
+  assert.strictEqual(host.owner, slotB)
+
+  release(slotB)
+  assert.strictEqual(slotB.host, null)
+  assert.strictEqual(slotA.host, host)
+  assert.strictEqual(host.owner, slotA)
+
+  release(slotA)
+  assert.strictEqual(slotA.host, null)
+  assert.strictEqual(host.owner, null)
+  assert.strictEqual(slots['audio'], undefined)
 })
 
 if (failures > 0) {
